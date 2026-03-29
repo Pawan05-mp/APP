@@ -30,7 +30,7 @@ export default function AuthScreen({ onLogin }) {
         });
 
         if (error) throw error;
-        onLogin(data.user.email);
+        onLogin(data.user);
       } else {
         const { data, error } = await supabase.auth.signUp({
           email: email.trim(),
@@ -39,9 +39,8 @@ export default function AuthScreen({ onLogin }) {
 
         if (error) throw error;
         // Supabase sends a confirmation email by default unless configured otherwise.
-        // We log them in directly if auto-confirm is on, or alert them.
         if (data?.user && data.session) {
-          onLogin(data.user.email);
+          onLogin(data.user);
         } else {
           setAuthError('Sign up successful! Please check your email for verification.');
         }

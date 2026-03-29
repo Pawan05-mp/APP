@@ -21,10 +21,11 @@ const MOODS = [
 ];
 
 export default function App() {
-  const [currentScreen, setCurrentScreen] = useState('splash');
+  const [isReady, setIsReady] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userEmail, setUserEmail] = useState('');
   const [userId, setUserId] = useState(null);
+  const [currentScreen, setCurrentScreen] = useState('home');
   
   const [selectedMood, setSelectedMood] = useState(null);
   const [places, setPlaces] = useState([]);
@@ -35,76 +36,72 @@ export default function App() {
   const [errorMsg, setErrorMsg] = useState(null);
 
   useEffect(() => {
-    // 1. Session Persistence Check
-    const checkUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        setIsAuthenticated(true);
-        setUserEmail(session.user.email);
-        setUserId(session.user.id);
-        setCurrentScreen('home');
-      }
-    };
-    checkUser();
-
-    // 2. Auth State Change Listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session) {
-        setIsAuthenticated(true);
-        setUserEmail(session.user.email);
-        setUserId(session.user.id);
-      } else {
-        setIsAuthenticated(false);
-        setUserEmail('');
-        setUserId(null);
-      }
-    });
-
-    // 3. Artificial Splash Delay
-    const splashTimer = setTimeout(() => {
-       // Only move to 'ready' if we haven't already moved to 'home' via auth check
-       setCurrentScreen(prev => prev === 'splash' ? 'ready' : prev);
-    }, 3200);
-
-    // 4. Location Fetching
-    (async () => {
-      let { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        setErrorMsg('Permission to access location was denied.\nUsing standard mockup config (Puducherry Location).');
-        setLocation({ lat: 11.93, lng: 79.83 });
-        setAddress('Puducherry, India');
-        return;
-      }
-
+    // Definitive Initialization Sequence
+    const initApp = async () => {
       try {
-        let currentLocation = await Location.getCurrentPositionAsync({});
-        setLocation({
-          lat: currentLocation.coords.latitude,
-          lng: currentLocation.coords.longitude,
-        });
-
-        const geocode = await Location.reverseGeocodeAsync({
-          latitude: currentLocation.coords.latitude,
-          longitude: currentLocation.coords.longitude
-        });
-
-        if (geocode && geocode.length > 0) {
-          const loc = geocode[0];
-          const localArea = [loc.name || loc.street, loc.district || loc.subregion || loc.city].filter(Boolean).join(', ');
-          setAddress(localArea || 'Current Location');
-        } else {
-          setAddress('Current Location');
+        // 1. Check Auth Session
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          setIsAuthenticated(true);
+          setUserEmail(session.user.email);
+          setUserId(session.user.id);
         }
-      } catch (err) {
-        setLocation({ lat: 11.93, lng: 79.83 });
-        setAddress('Puducherry, India');
-      }
-    })();
 
-    return () => {
-      clearTimeout(splashTimer);
-      subscription.unsubscribe();
+        // 2. Auth State Change Listener (Persistent)
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+          if (session) {
+            setIsAuthenticated(true);
+            setUserEmail(session.user.email);
+            setUserId(session.user.id);
+          } else {
+            setIsAuthenticated(false);
+            setUserEmail('');
+            setUserId(null);
+            setCurrentScreen('ready');
+          }
+        });
+
+        // 3. Location Fetching
+        let { status } = await Location.requestForegroundPermissionsAsync();
+        if (status === 'granted') {
+          let currentLocation = await Location.getCurrentPositionAsync({});
+          const coords = {
+            lat: currentLocation.coords.latitude,
+            lng: currentLocation.coords.longitude,
+          };
+          setLocation(coords);
+
+          const geocode = await Location.reverseGeocodeAsync({
+            latitude: coords.lat,
+            longitude: coords.lng
+          });
+
+          if (geocode && geocode.length > 0) {
+            const loc = geocode[0];
+            const localArea = [loc.name || loc.street, loc.district || loc.subregion || loc.city].filter(Boolean).join(', ');
+            setAddress(localArea || 'Current Location');
+          } else {
+            setAddress('Current Location');
+          }
+        } else {
+          setErrorMsg('Permission to access location was denied.\nUsing standard mockup config.');
+          setLocation({ lat: 11.93, lng: 79.83 });
+          setAddress('Puducherry, India');
+        }
+
+        // 4. Cleanup & Readiness
+        // Artificial delay of 1.5s just for branding splash feels, total boot time around 2-3s
+        setTimeout(() => setIsReady(true), 1500);
+        
+        return () => subscription.unsubscribe();
+
+      } catch (err) {
+        console.error("Initialization error:", err);
+        setIsReady(true); // Don't hang app on error
+      }
     };
+
+    initApp();
   }, []);
 
   const handleMoodSelect = async (moodId) => {
@@ -119,7 +116,7 @@ export default function App() {
       setPlaces(data);
     } catch (err) {
       console.error(err);
-      setErrorMsg("Backend Error. Make sure API server is running on the correct local IP.");
+      setErrorMsg("Backend Error. Connection timed out.");
     } finally {
       setIsLoading(false);
     }
@@ -129,12 +126,10 @@ export default function App() {
     if (!location || !selectedMood) return;
     setIsRefreshing(true);
     try {
-      // Fetch new distinct recommendations without loading spinner takeover
       const data = await getRecommendations(location.lat, location.lng, selectedMood, userId);
       setPlaces(data);
     } catch (err) {
       console.error(err);
-      setErrorMsg("Backend connection failed while refreshing.");
     } finally {
       setIsRefreshing(false);
     }
@@ -147,19 +142,20 @@ export default function App() {
     setCurrentScreen('home');
   };
 
-  const handleLogin = (email) => {
-    setUserEmail(email);
+  const handleLogin = (user) => {
+    setUserEmail(user.email);
+    setUserId(user.id);
     setIsAuthenticated(true);
     setCurrentScreen('home');
   };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    setCurrentScreen('ready');
+    // onAuthStateChange will handle state cleanup
   };
 
   // State Router
-  if (currentScreen === 'splash') return <LoadingScreen />;
+  if (!isReady) return <LoadingScreen />;
   if (!isAuthenticated) return <AuthScreen onLogin={handleLogin} />;
   
   if (currentScreen === 'profile') {
