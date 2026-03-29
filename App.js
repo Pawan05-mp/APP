@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import MoodCard from './src/components/MoodCard';
 import PlaceCard from './src/components/PlaceCard';
 import { getRecommendations } from './src/api';
+import { supabase } from './src/supabase';
 
 import LoadingScreen from './src/screens/LoadingScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
@@ -23,6 +24,7 @@ export default function App() {
   const [currentScreen, setCurrentScreen] = useState('splash');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userEmail, setUserEmail] = useState('');
+  const [userId, setUserId] = useState(null);
   
   const [selectedMood, setSelectedMood] = useState(null);
   const [places, setPlaces] = useState([]);
@@ -33,11 +35,37 @@ export default function App() {
   const [errorMsg, setErrorMsg] = useState(null);
 
   useEffect(() => {
-    // Artificial Splash Delay to simulate Visily load mockup and allow background async actions to parse silently
+    // 1. Session Persistence Check
+    const checkUser = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        setIsAuthenticated(true);
+        setUserEmail(session.user.email);
+        setUserId(session.user.id);
+        setCurrentScreen('home');
+      }
+    };
+    checkUser();
+
+    // 2. Auth State Change Listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) {
+        setIsAuthenticated(true);
+        setUserEmail(session.user.email);
+        setUserId(session.user.id);
+      } else {
+        setIsAuthenticated(false);
+        setUserEmail('');
+        setUserId(null);
+      }
+    });
+
+    // 3. Artificial Splash Delay
     const splashTimer = setTimeout(() => {
-       setCurrentScreen('ready');
+       if (currentScreen === 'splash') setCurrentScreen('ready');
     }, 3200);
 
+    // 4. Location Fetching
     (async () => {
       let { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
@@ -72,7 +100,10 @@ export default function App() {
       }
     })();
 
-    return () => clearTimeout(splashTimer);
+    return () => {
+      clearTimeout(splashTimer);
+      subscription.unsubscribe();
+    };
   }, []);
 
   const handleMoodSelect = async (moodId) => {
@@ -83,7 +114,7 @@ export default function App() {
     setPlaces([]);
 
     try {
-      const data = await getRecommendations(location.lat, location.lng, moodId);
+      const data = await getRecommendations(location.lat, location.lng, moodId, userId);
       setPlaces(data);
     } catch (err) {
       console.error(err);
@@ -98,7 +129,7 @@ export default function App() {
     setIsRefreshing(true);
     try {
       // Fetch new distinct recommendations without loading spinner takeover
-      const data = await getRecommendations(location.lat, location.lng, selectedMood);
+      const data = await getRecommendations(location.lat, location.lng, selectedMood, userId);
       setPlaces(data);
     } catch (err) {
       console.error(err);
@@ -121,9 +152,8 @@ export default function App() {
     setCurrentScreen('home');
   };
 
-  const handleLogout = () => {
-    setIsAuthenticated(false);
-    setUserEmail('');
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
     setCurrentScreen('ready');
   };
 
@@ -135,7 +165,8 @@ export default function App() {
     return <ProfileScreen 
              onNavigate={setCurrentScreen} 
              onLogout={handleLogout} 
-             email={userEmail} 
+             email={userEmail}
+             userId={userId}
            />;
   }
 
@@ -167,6 +198,7 @@ export default function App() {
         {!selectedMood ? (
           <View style={styles.moodSection}>
             <Text style={styles.question}>How are you feeling right now?</Text>
+            <Text style={styles.questionSub}>We'll find the perfect spot for your current mood.</Text>
             <View style={styles.moodGrid}>
               {MOODS.map((mood) => (
                 <MoodCard
@@ -209,7 +241,12 @@ export default function App() {
                  {places.length > 0 ? (
                    places.map((place, index) => (
                      <View key={place._id}>
-                        <PlaceCard place={place} index={index} />
+                        <PlaceCard 
+                          place={place} 
+                          index={index} 
+                          userId={userId} 
+                          mood={selectedMood} 
+                        />
                      </View>
                    ))
                  ) : (
@@ -289,6 +326,12 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: '700',
     color: '#FFF',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  questionSub: {
+    fontSize: 14,
+    color: '#A1A5B7',
     marginBottom: 32,
     textAlign: 'center',
   },

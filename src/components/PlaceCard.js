@@ -1,9 +1,11 @@
-import React, { useRef, useEffect } from 'react';
-import { StyleSheet, Text, View, Pressable, Animated, Linking } from 'react-native';
+import React, { useRef, useEffect, useState } from 'react';
+import { StyleSheet, Text, View, Pressable, Animated, Linking, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { interactWithPlace } from '../api';
 
-const PlaceCard = ({ place, index }) => {
-  const { name, estimatedMinutes, distanceInKm, reason, category, score } = place;
+const PlaceCard = ({ place, index, userId, mood }) => {
+  const { _id, name, estimatedMinutes, distanceInKm, reason, category } = place;
+  const [isSaved, setIsSaved] = useState(false);
   
   // Animation on mount
   const translateY = useRef(new Animated.Value(50)).current;
@@ -15,7 +17,7 @@ const PlaceCard = ({ place, index }) => {
         toValue: 0,
         tension: 50,
         friction: 7,
-        delay: index * 100, // Staggered appearance
+        delay: index * 100,
         useNativeDriver: true,
       }),
       Animated.timing(opacity, {
@@ -37,7 +39,13 @@ const PlaceCard = ({ place, index }) => {
     }
   };
 
+  const handleSave = () => {
+    setIsSaved(!isSaved);
+    interactWithPlace(userId, _id, isSaved ? 'unsave' : 'save', mood);
+  };
+
   const handleNavigate = () => {
+    interactWithPlace(userId, _id, 'go', mood);
     const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name)}`;
     Linking.openURL(url).catch(err => console.error('Error opening Map:', err));
   };
@@ -52,27 +60,38 @@ const PlaceCard = ({ place, index }) => {
           <Text style={styles.emoji}>{getCategoryIcon(category)}</Text>
           <Text style={styles.name} numberOfLines={1}>{name}</Text>
         </View>
+        <TouchableOpacity onPress={handleSave} style={styles.saveBtn}>
+          <Ionicons 
+            name={isSaved ? "heart" : "heart-outline"} 
+            size={24} 
+            color={isSaved ? "#FF5A5F" : "#FFF"} 
+          />
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.badgeRow}>
         <View style={styles.timeBadge}>
           <Ionicons name="time-outline" size={12} color="#00FFC2" />
           <Text style={styles.timeText}>{estimatedMinutes} min</Text>
+        </View>
+        <View style={styles.distanceBadge}>
+          <Ionicons name="location-outline" size={12} color="#A1A5B7" />
+          <Text style={styles.distanceText}>{distanceInKm} km away</Text>
         </View>
       </View>
 
       <View style={styles.body}>
         <View style={styles.reasonPill}>
-          <Ionicons name="star" size={10} color="#00FFC2" />
+          <Ionicons name="sparkles" size={10} color="#00FFC2" />
           <Text style={styles.reasonText}>{reason}</Text>
         </View>
-        <Text style={styles.distanceText}>
-          <Ionicons name="location-outline" size={12} color="#A1A5B7" /> {distanceInKm} km away • Walk / 2W
-        </Text>
       </View>
 
       <Pressable 
         style={({ pressed }) => [styles.navBtn, pressed && styles.navBtnPressed]}
         onPress={handleNavigate}
       >
-        <Ionicons name="navigate" size={16} color="#000" />
+        <Ionicons name="navigate" size={18} color="#000" />
         <Text style={styles.navBtnText}>Go Now</Text>
       </Pressable>
     </Animated.View>
@@ -82,86 +101,106 @@ const PlaceCard = ({ place, index }) => {
 const styles = StyleSheet.create({
   card: {
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: 20,
-    padding: 16,
-    marginBottom: 16,
+    borderRadius: 24,
+    padding: 20,
+    marginBottom: 20,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: 'rgba(255, 255, 255, 0.08)',
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 16,
   },
   titleGroup: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
-    marginRight: 10,
   },
   emoji: {
-    fontSize: 22,
-    marginRight: 8,
+    fontSize: 24,
+    marginRight: 10,
   },
   name: {
     color: '#FFF',
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 20,
+    fontWeight: '800',
     flex: 1,
+  },
+  saveBtn: {
+    padding: 4,
+  },
+  badgeRow: {
+    flexDirection: 'row',
+    marginBottom: 16,
   },
   timeBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 255, 194, 0.15)',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    backgroundColor: 'rgba(0, 255, 194, 0.1)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: 12,
+    marginRight: 10,
   },
   timeText: {
     color: '#00FFC2',
-    fontSize: 12,
-    fontWeight: 'bold',
+    fontSize: 13,
+    fontWeight: '700',
+    marginLeft: 6,
+  },
+  distanceBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+  },
+  distanceText: {
+    color: '#A1A5B7',
+    fontSize: 13,
+    fontWeight: '600',
     marginLeft: 4,
   },
   body: {
-    marginBottom: 16,
+    marginBottom: 20,
   },
   reasonPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
     alignSelf: 'flex-start',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-    marginBottom: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 10,
   },
   reasonText: {
-    color: '#E2E8F0',
-    fontSize: 12,
-    marginLeft: 4,
-  },
-  distanceText: {
-    color: '#A1A5B7',
-    fontSize: 12,
+    color: '#CBD5E1',
+    fontSize: 13,
+    marginLeft: 6,
+    fontWeight: '500',
   },
   navBtn: {
-    backgroundColor: '#FFF',
+    backgroundColor: '#00FFC2',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 14,
-    borderRadius: 14,
+    paddingVertical: 16,
+    borderRadius: 16,
+    shadowColor: '#00FFC2',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   navBtnPressed: {
-    backgroundColor: '#00FFC2',
+    opacity: 0.8,
+    transform: [{ scale: 0.98 }],
   },
   navBtnText: {
     color: '#000',
     fontSize: 16,
-    fontWeight: 'bold',
-    marginLeft: 6,
+    fontWeight: '800',
+    marginLeft: 8,
   }
 });
 

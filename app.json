@@ -2,6 +2,7 @@
   "expo": {
     "name": "zipo-app",
     "slug": "zipo-app",
+    "scheme": "zipo-app",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -30,6 +31,12 @@
       "eas": {
         "projectId": "6275303c-057a-4862-9dd1-009ba70c148b"
       }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/6275303c-057a-4862-9dd1-009ba70c148b"
     }
   }
 }

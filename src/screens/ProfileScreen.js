@@ -1,9 +1,46 @@
-import React from 'react';
-import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { getUserStats, getPreferences, updatePreferences } from '../api';
 
-export default function ProfileScreen({ onNavigate, onLogout, email }) {
-  const displayName = email ? email.split('@')[0].toUpperCase() : 'ALEX RIVERA';
+export default function ProfileScreen({ onNavigate, onLogout, email, userId }) {
+  const [stats, setStats] = useState({ saved: 0, visits: 0, vibes: 0 });
+  const [prefs, setPrefs] = useState({ taste: 'Street food, Cafes', budget: 'Low - Medium' });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const initProfile = async () => {
+      if (userId) {
+        const [statsData, prefData] = await Promise.all([
+          getUserStats(userId),
+          getPreferences(userId)
+        ]);
+        setStats(statsData);
+        setPrefs(prefData);
+      }
+      setLoading(false);
+    };
+    initProfile();
+  }, [userId]);
+
+  const cycleTaste = async () => {
+    const options = ['Street food, Cafes', 'Fine Dining, Wines', 'Bakeries, Desserts', 'Healthy, Organic'];
+    const nextIndex = (options.indexOf(prefs.taste) + 1) % options.length;
+    const newTaste = options[nextIndex];
+    setPrefs({ ...prefs, taste: newTaste });
+    await updatePreferences(userId, newTaste, prefs.budget);
+  };
+
+  const cycleBudget = async () => {
+    const options = ['Low - Medium', 'Medium - High', 'Premium Luxury', 'Strict Budget'];
+    const nextIndex = (options.indexOf(prefs.budget) + 1) % options.length;
+    const newBudget = options[nextIndex];
+    setPrefs({ ...prefs, budget: newBudget });
+    await updatePreferences(userId, prefs.taste, newBudget);
+  };
+
+  const displayName = email ? email.split('@')[0].toUpperCase() : 'EXPLORER';
+  const explorerLevel = Math.floor(stats.visits / 5) + 1;
   
   return (
     <View style={styles.container}>
@@ -22,7 +59,7 @@ export default function ProfileScreen({ onNavigate, onLogout, email }) {
         <View style={styles.avatarSection}>
           <View style={styles.avatarGlow}>
             <Image 
-              source={{ uri: 'https://i.pravatar.cc/150?img=11' }} 
+              source={{ uri: `https://i.pravatar.cc/150?u=${userId || 'default'}` }} 
               style={styles.avatar} 
             />
             <View style={styles.avatarBadge}>
@@ -33,11 +70,7 @@ export default function ProfileScreen({ onNavigate, onLogout, email }) {
           <Text style={styles.nameText}>{displayName}</Text>
           <View style={styles.tagRow}>
             <View style={styles.eliteBadge}>
-              <Text style={styles.eliteText}>ELITE EXPLORER</Text>
-            </View>
-            <View style={styles.locationTag}>
-              <Ionicons name="location" size={14} color="#00FFC2" />
-              <Text style={styles.locationText}>NYC, USA</Text>
+              <Text style={styles.eliteText}>LEVEL {explorerLevel} EXPLORER</Text>
             </View>
           </View>
         </View>
@@ -46,63 +79,53 @@ export default function ProfileScreen({ onNavigate, onLogout, email }) {
         <View style={styles.statsRow}>
           <View style={styles.statBox}>
             <Ionicons name="bookmark" size={20} color="#00FFC2" style={styles.statIcon} />
-            <Text style={styles.statNumber}>28</Text>
+            <Text style={styles.statNumber}>{stats.saved}</Text>
             <Text style={styles.statLabel}>SAVED</Text>
           </View>
           <View style={styles.statBox}>
             <Ionicons name="navigate" size={20} color="#A1A5B7" style={styles.statIcon} />
-            <Text style={[styles.statNumber, { color: '#FFF' }]}>14</Text>
+            <Text style={[styles.statNumber, { color: '#FFF' }]}>{stats.visits}</Text>
             <Text style={styles.statLabel}>VISITS</Text>
           </View>
           <View style={styles.statBox}>
             <Ionicons name="pulse" size={20} color="#FF5A5F" style={styles.statIcon} />
-            <Text style={[styles.statNumber, { color: '#FFF' }]}>8</Text>
-            <Text style={styles.statLabel}>VIBES</Text>
+            <Text style={[styles.statNumber, { color: '#FFF' }]}>{stats.vibes}</Text>
+            <Text style={styles.statLabel}>MOODS</Text>
           </View>
         </View>
 
         {/* PREFS */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>PREFERENCES</Text>
-          <TouchableOpacity>
-             <Text style={styles.editAll}>EDIT ALL</Text>
-          </TouchableOpacity>
+          <Text style={styles.editAll}>(Tap cards to change)</Text>
         </View>
 
-        <TouchableOpacity style={styles.card}>
+        <TouchableOpacity style={styles.card} onPress={cycleTaste}>
           <View style={[styles.cardIconBox, { backgroundColor: 'rgba(0, 255, 194, 0.15)' }]}>
              <Ionicons name="restaurant" size={20} color="#00FFC2" />
           </View>
           <View style={styles.cardContent}>
             <Text style={styles.cardLabel}>Taste Palette</Text>
-            <Text style={styles.cardValue}>Street food, Cafes</Text>
+            <Text style={styles.cardValue}>{prefs.taste}</Text>
           </View>
-          <Ionicons name="chevron-forward" size={18} color="#444" />
+          <Ionicons name="swap-horizontal" size={18} color="#444" />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.card}>
+        <TouchableOpacity style={styles.card} onPress={cycleBudget}>
           <View style={[styles.cardIconBox, { backgroundColor: 'rgba(161, 165, 183, 0.15)' }]}>
              <Ionicons name="wallet" size={20} color="#A1A5B7" />
           </View>
           <View style={styles.cardContent}>
             <Text style={styles.cardLabel}>Budget Range</Text>
-            <Text style={styles.cardValue}>Low - Medium</Text>
+            <Text style={styles.cardValue}>{prefs.budget}</Text>
           </View>
-          <Ionicons name="chevron-forward" size={18} color="#444" />
+          <Ionicons name="swap-horizontal" size={18} color="#444" />
         </TouchableOpacity>
 
         {/* ACCOUNT */}
         <Text style={[styles.sectionTitle, { marginTop: 32 }]}>ACCOUNT SETTINGS</Text>
         <View style={styles.listCard}>
-          <TouchableOpacity style={styles.listItem}>
-            <View style={styles.listIconContainer}>
-               <Ionicons name="notifications" size={20} color="#A1A5B7" />
-            </View>
-            <Text style={styles.listText}>Notifications</Text>
-            <Ionicons name="chevron-forward" size={18} color="#444" />
-          </TouchableOpacity>
-          <View style={styles.divider} />
-          <TouchableOpacity style={styles.listItem}>
+          <TouchableOpacity style={styles.listItem} onPress={() => Alert.alert('Privacy', 'Your data is secured with Supabase Auth.')}>
             <View style={styles.listIconContainer}>
                <Ionicons name="shield-checkmark" size={20} color="#A1A5B7" />
             </View>
@@ -118,7 +141,7 @@ export default function ProfileScreen({ onNavigate, onLogout, email }) {
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.footerAppVersion}>ZIPO v1.0.0</Text>
+        <Text style={styles.footerAppVersion}>ZIPO v1.1.0 (Live Context)</Text>
 
       </ScrollView>
     </View>
