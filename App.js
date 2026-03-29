@@ -62,7 +62,8 @@ export default function App() {
 
     // 3. Artificial Splash Delay
     const splashTimer = setTimeout(() => {
-       if (currentScreen === 'splash') setCurrentScreen('ready');
+       // Only move to 'ready' if we haven't already moved to 'home' via auth check
+       setCurrentScreen(prev => prev === 'splash' ? 'ready' : prev);
     }, 3200);
 
     // 4. Location Fetching
