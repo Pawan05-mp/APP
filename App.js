@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
+import * as Updates from 'expo-updates';
 
 import MoodCard from './src/components/MoodCard';
 import PlaceCard from './src/components/PlaceCard';
@@ -67,6 +68,24 @@ export default function App() {
   const loadingStepRef = useRef(null);
 
   useEffect(() => {
+    async function updateApp() {
+      if (__DEV__) return;
+      try {
+        const update = await Updates.checkForUpdateAsync();
+        if (update.isAvailable) {
+          await Updates.fetchUpdateAsync();
+          await Updates.reloadAsync();
+        }
+      } catch (e) {
+        console.log("Update error:", e);
+      }
+    }
+    updateApp();
+  }, []);
+
+  useEffect(() => {
+    console.log("Channel:", Updates.channel);
+    console.log("Runtime:", Updates.runtimeVersion);
     const initApp = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
