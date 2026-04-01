@@ -23,6 +23,15 @@ export default function ProfileScreen({ onNavigate, onLogout, email, userId }) {
     initProfile();
   }, [userId]);
 
+  if (loading) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color="#00FFC2" />
+        <Text style={{ color: '#A1A5B7', marginTop: 12, fontWeight: '600' }}>Syncing profile data...</Text>
+      </View>
+    );
+  }
+
   const cycleTaste = async () => {
     const options = ['Street food, Cafes', 'Fine Dining, Wines', 'Bakeries, Desserts', 'Healthy, Organic'];
     const nextIndex = (options.indexOf(prefs.taste) + 1) % options.length;
@@ -125,7 +134,13 @@ export default function ProfileScreen({ onNavigate, onLogout, email, userId }) {
         {/* ACCOUNT */}
         <Text style={[styles.sectionTitle, { marginTop: 32 }]}>ACCOUNT SETTINGS</Text>
         <View style={styles.listCard}>
-          <TouchableOpacity style={styles.listItem} onPress={() => Alert.alert('Privacy', 'Your data is secured with Supabase Auth.')}>
+          <TouchableOpacity 
+            style={styles.listItem} 
+            onPress={() => Alert.alert(
+              'Privacy & Security', 
+              'Your data is protected by Supabase Encryption. We only store your preferences and interaction history to improve recommendations.'
+            )}
+          >
             <View style={styles.listIconContainer}>
                <Ionicons name="shield-checkmark" size={20} color="#A1A5B7" />
             </View>

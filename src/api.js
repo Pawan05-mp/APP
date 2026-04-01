@@ -1,17 +1,11 @@
 import axios from 'axios';
-
-// IMPORTANT: For Android Emulator to access local node server, use 10.0.2.2 
-// For physical device, use your computer's local WiFi IP (e.g., 192.168.1.xxx)
-// Fallback is standard localhost for web/iOS sim.
 import { Platform } from 'react-native';
 
 const getBaseUrl = () => {
-  // ⚡ Local WiFi IP dynamically mapped to link Physical Expo Go app (Android & iOS) to the Local Windows Backend safely
-  // 10.0.2.2 removed since you are using a Physical Android device from the PlayStore
   return 'https://app-repo-0j9c.onrender.com/api';
 };
 
-const API_URL = 'https://app-repo-0j9c.onrender.com/api'; // Standard Physical LAN Bridge
+const API_URL = 'https://app-repo-0j9c.onrender.com/api';
 
 export const getRecommendations = async (lat, lng, mood, userId) => {
   try {
@@ -49,6 +43,51 @@ export const interactWithPlace = async (userId, placeId, action, mood = null) =>
     console.error("Error logging interaction:", error);
   }
 };
+export const getInstantPick = async (lat, lng, mood, userId, excludeIds = []) => {
+  try {
+    const response = await axios.get(`${API_URL}/places/instant`, {
+      params: {
+        lat, lng, mood,
+        user_id: userId,
+        exclude: excludeIds.join(',')
+      }
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching instant picks:", error);
+    throw error;
+  }
+};
+
+export const getInstantReplacement = async (lat, lng, mood, userId, currentIds = []) => {
+  try {
+    const response = await axios.get(`${API_URL}/places/instant`, {
+      params: {
+        lat, lng, mood,
+        user_id: userId,
+        exclude: currentIds.join(',')
+      }
+    });
+    // Return just the first result as the replacement
+    return response.data?.[0] || null;
+  } catch (error) {
+    console.error("Error fetching replacement:", error);
+    return null;
+  }
+};
+
+export const getSavedPlaces = async (userId) => {
+  try {
+    const response = await axios.get(`${API_URL}/places/saved`, {
+      params: { user_id: userId }
+    });
+    return response.data || [];
+  } catch (error) {
+    console.error("Error fetching saved places:", error);
+    return [];
+  }
+};
+
 export const getPreferences = async (userId) => {
   try {
     const response = await axios.get(`${API_URL}/places/preferences`, {

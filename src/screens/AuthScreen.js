@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { supabase } from '../supabase';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function AuthScreen({ onLogin }) {
@@ -10,6 +10,24 @@ export default function AuthScreen({ onLogin }) {
   const [showPassword, setShowPassword] = useState(false);
   const [authError, setAuthError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  const handleForgotPassword = async () => {
+    setAuthError(null);
+    if (!email.trim()) {
+      setAuthError('Please enter your email to reset password.');
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email.trim());
+      if (error) throw error;
+      Alert.alert('Reset Link Sent', 'Please check your inbox for instructions to reset your password.');
+    } catch (err) {
+      setAuthError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleSumbit = async () => {
     setAuthError(null);
@@ -107,7 +125,7 @@ export default function AuthScreen({ onLogin }) {
             </View>
 
             {isLogin && (
-              <TouchableOpacity style={styles.forgotBtn}>
+              <TouchableOpacity style={styles.forgotBtn} onPress={handleForgotPassword}>
                 <Text style={styles.forgotText}>Forgot Password?</Text>
               </TouchableOpacity>
             )}
