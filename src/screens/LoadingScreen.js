@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated } from 'react-native';
+import { View, Text, StyleSheet, Animated, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { Theme } from '../constants/Theme';
 
 export default function LoadingScreen() {
   const spinAnim = useRef(new Animated.Value(0)).current;
@@ -24,12 +25,12 @@ export default function LoadingScreen() {
     <View style={styles.container}>
       <View style={styles.centerBox}>
         <View style={styles.logoGlowbox}>
-          <View style={styles.logoCircle}>
-            <Ionicons name="location-sharp" size={46} color="#0D0D12" style={styles.iconShift} />
-          </View>
+          <Image 
+            source={require('../../assets/adaptive-icon-dark.png')} 
+            style={styles.loadingLogo}
+            resizeMode="contain"
+          />
         </View>
-        
-        <Text style={styles.brandTitle}>Z I P O</Text>
         
         <Text style={styles.subtitle}>
           <Text style={styles.italic}>Where to go,</Text>
@@ -47,7 +48,7 @@ export default function LoadingScreen() {
 
       <View style={styles.footer}>
         <View style={styles.line} />
-        <Text style={styles.versionText}>ZIPO CADI_ENGINE v1.0.42</Text>
+        <Text style={styles.versionText}>TRIXILE CADI_ENGINE v1.0.42</Text>
         <View style={styles.statusDot} />
       </View>
     </View>
@@ -57,7 +58,7 @@ export default function LoadingScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0D0D12', // Rich graphite to match the Profile screen
+    backgroundColor: Theme.dark.background.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -67,45 +68,39 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   logoGlowbox: {
-    shadowColor: '#00FFC2',
+    shadowColor: Theme.brand.hero,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.8,
     shadowRadius: 36,
     elevation: 20,
     marginBottom: 24,
   },
-  logoCircle: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: '#00FFC2',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 4,
-    borderColor: '#0D0D12',
+  loadingLogo: {
+    width: 200,
+    height: 120,
   },
   iconShift: {
     marginLeft: 2, // Centering fix for standard map pins
   },
   brandTitle: {
-    color: '#FFF',
+    color: Theme.dark.text.primary,
     fontSize: 54,
     fontWeight: '900',
     letterSpacing: 4,
     marginBottom: 16,
   },
   subtitle: {
-    color: '#E0E0E0',
+    color: Theme.dark.text.secondary,
     fontSize: 16,
   },
   italic: {
     fontStyle: 'italic',
     fontWeight: '400',
-    color: '#A1A5B7',
+    color: Theme.dark.text.secondary,
   },
   bold: {
     fontWeight: '800',
-    color: '#FFF',
+    color: Theme.dark.text.primary,
   },
   loaderBox: {
     marginTop: 64,
@@ -122,13 +117,13 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: '#00FFC2',
+    backgroundColor: Theme.brand.hero,
   },
   dot2: {
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: '#006B52',
+    backgroundColor: Theme.brand.deep,
     alignSelf: 'flex-end',
   },
   initText: {
@@ -145,11 +140,11 @@ const styles = StyleSheet.create({
   line: {
     width: 40,
     height: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: Theme.dark.border,
     marginBottom: 12,
   },
   versionText: {
-    color: '#444',
+    color: Theme.dark.text.secondary,
     fontSize: 10,
     fontWeight: '800',
     letterSpacing: 2,
@@ -159,8 +154,8 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#00FFC2',
-    shadowColor: '#00FFC2',
+    backgroundColor: Theme.brand.hero,
+    shadowColor: Theme.brand.hero,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 1,
     shadowRadius: 10,

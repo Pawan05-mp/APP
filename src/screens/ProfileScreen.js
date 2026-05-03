@@ -1,12 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, ActivityIndicator, Alert, StatusBar } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { getUserStats, getPreferences, updatePreferences } from '../api';
+import { useSavedPlaces } from '../context/SavedPlacesContext';
+import { useTheme } from '../context/ThemeContext';
+import PlaceCard from '../components/PlaceCard';
+import { Typography, Spacing, Radius, Palette } from '../constants/DesignTokens';
 
 export default function ProfileScreen({ onNavigate, onLogout, email, userId }) {
   const [stats, setStats] = useState({ saved: 0, visits: 0, vibes: 0 });
   const [prefs, setPrefs] = useState({ taste: 'Street food, Cafes', budget: 'Low - Medium' });
   const [loading, setLoading] = useState(true);
+  const [showSaved, setShowSaved] = useState(false);
+  const { savedPlaces } = useSavedPlaces();
+  const { isDarkMode, toggleTheme, colors, theme } = useTheme();
 
   useEffect(() => {
     const initProfile = async () => {
@@ -25,138 +32,108 @@ export default function ProfileScreen({ onNavigate, onLogout, email, userId }) {
 
   if (loading) {
     return (
-      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator size="large" color="#00FFC2" />
-        <Text style={{ color: '#A1A5B7', marginTop: 12, fontWeight: '600' }}>Syncing profile data...</Text>
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.hero} />
       </View>
     );
   }
 
-  const cycleTaste = async () => {
-    const options = ['Street food, Cafes', 'Fine Dining, Wines', 'Bakeries, Desserts', 'Healthy, Organic'];
-    const nextIndex = (options.indexOf(prefs.taste) + 1) % options.length;
-    const newTaste = options[nextIndex];
-    setPrefs({ ...prefs, taste: newTaste });
-    await updatePreferences(userId, newTaste, prefs.budget);
-  };
-
-  const cycleBudget = async () => {
-    const options = ['Low - Medium', 'Medium - High', 'Premium Luxury', 'Strict Budget'];
-    const nextIndex = (options.indexOf(prefs.budget) + 1) % options.length;
-    const newBudget = options[nextIndex];
-    setPrefs({ ...prefs, budget: newBudget });
-    await updatePreferences(userId, prefs.taste, newBudget);
-  };
-
   const displayName = email ? email.split('@')[0].toUpperCase() : 'EXPLORER';
-  const explorerLevel = Math.floor(stats.visits / 5) + 1;
   
   return (
-    <View style={styles.container}>
-      {/* HEADER */}
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => onNavigate('home')}>
-          <Ionicons name="arrow-back" size={28} color="#00FFC2" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>PROFILE</Text>
-        <View style={styles.spacer} />
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
+      
+      <View style={[styles.header, { borderBottomColor: colors.border }]}>
+        <View style={styles.headerSideContainer}>
+          <TouchableOpacity onPress={() => onNavigate('home')}>
+            <Ionicons name="arrow-back" size={28} color={colors.hero} />
+          </TouchableOpacity>
+        </View>
+        <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>PROFILE</Text>
+        <View style={[styles.headerSideContainer, { alignItems: 'flex-end' }]}>
+          <Image 
+            source={isDarkMode ? require('../../assets/adaptive-icon-dark.png') : require('../../assets/adaptive-icon-light.png')} 
+            style={styles.headerRectIcon}
+            resizeMode="contain"
+          />
+        </View>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         
-        {/* AVATAR BLOCK */}
+        {/* AVATAR SECTION */}
         <View style={styles.avatarSection}>
-          <View style={styles.avatarGlow}>
+          <View style={[styles.avatarGlow, { backgroundColor: colors.hero + '1A' }]}>
             <Image 
               source={{ uri: `https://i.pravatar.cc/150?u=${userId || 'default'}` }} 
-              style={styles.avatar} 
+              style={[styles.avatar, { borderColor: colors.background }]} 
             />
-            <View style={styles.avatarBadge}>
-              <Ionicons name="sparkles" size={14} color="#121212" />
-            </View>
           </View>
-          
-          <Text style={styles.nameText}>{displayName}</Text>
-          <View style={styles.tagRow}>
-            <View style={styles.eliteBadge}>
-              <Text style={styles.eliteText}>LEVEL {explorerLevel} EXPLORER</Text>
-            </View>
+          <Text style={[styles.nameText, { color: colors.textPrimary }]}>{displayName}</Text>
+          <View style={[styles.levelBadge, { backgroundColor: colors.surfaceSecondary }]}>
+            <Text style={[styles.levelText, { color: colors.textSecondary }]}>GOLD MEMBER</Text>
           </View>
         </View>
 
-        {/* STATS */}
+        {/* STATS GRID */}
         <View style={styles.statsRow}>
-          <View style={styles.statBox}>
-            <Ionicons name="bookmark" size={20} color="#00FFC2" style={styles.statIcon} />
-            <Text style={styles.statNumber}>{stats.saved}</Text>
-            <Text style={styles.statLabel}>SAVED</Text>
-          </View>
-          <View style={styles.statBox}>
-            <Ionicons name="navigate" size={20} color="#A1A5B7" style={styles.statIcon} />
-            <Text style={[styles.statNumber, { color: '#FFF' }]}>{stats.visits}</Text>
-            <Text style={styles.statLabel}>VISITS</Text>
-          </View>
-          <View style={styles.statBox}>
-            <Ionicons name="pulse" size={20} color="#FF5A5F" style={styles.statIcon} />
-            <Text style={[styles.statNumber, { color: '#FFF' }]}>{stats.vibes}</Text>
-            <Text style={styles.statLabel}>MOODS</Text>
-          </View>
-        </View>
-
-        {/* PREFS */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>PREFERENCES</Text>
-          <Text style={styles.editAll}>(Tap cards to change)</Text>
-        </View>
-
-        <TouchableOpacity style={styles.card} onPress={cycleTaste}>
-          <View style={[styles.cardIconBox, { backgroundColor: 'rgba(0, 255, 194, 0.15)' }]}>
-             <Ionicons name="restaurant" size={20} color="#00FFC2" />
-          </View>
-          <View style={styles.cardContent}>
-            <Text style={styles.cardLabel}>Taste Palette</Text>
-            <Text style={styles.cardValue}>{prefs.taste}</Text>
-          </View>
-          <Ionicons name="swap-horizontal" size={18} color="#444" />
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.card} onPress={cycleBudget}>
-          <View style={[styles.cardIconBox, { backgroundColor: 'rgba(161, 165, 183, 0.15)' }]}>
-             <Ionicons name="wallet" size={20} color="#A1A5B7" />
-          </View>
-          <View style={styles.cardContent}>
-            <Text style={styles.cardLabel}>Budget Range</Text>
-            <Text style={styles.cardValue}>{prefs.budget}</Text>
-          </View>
-          <Ionicons name="swap-horizontal" size={18} color="#444" />
-        </TouchableOpacity>
-
-        {/* ACCOUNT */}
-        <Text style={[styles.sectionTitle, { marginTop: 32 }]}>ACCOUNT SETTINGS</Text>
-        <View style={styles.listCard}>
           <TouchableOpacity 
-            style={styles.listItem} 
-            onPress={() => Alert.alert(
-              'Privacy & Security', 
-              'Your data is protected by Supabase Encryption. We only store your preferences and interaction history to improve recommendations.'
-            )}
+            style={[styles.statBox, { backgroundColor: colors.surface, borderColor: colors.border }, showSaved && { borderColor: colors.hero }]} 
+            onPress={() => setShowSaved(!showSaved)}
           >
-            <View style={styles.listIconContainer}>
-               <Ionicons name="shield-checkmark" size={20} color="#A1A5B7" />
-            </View>
-            <Text style={styles.listText}>Privacy {"&"} Security</Text>
-            <Ionicons name="chevron-forward" size={18} color="#444" />
+            <Text style={[styles.statNumber, { color: colors.textPrimary }]}>{savedPlaces.length}</Text>
+            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>SAVED</Text>
           </TouchableOpacity>
-          <View style={styles.divider} />
-          <TouchableOpacity style={styles.listItem} onPress={onLogout}>
-            <View style={styles.listIconContainer}>
-               <Ionicons name="log-out" size={20} color="#FF5A5F" />
+          <View style={[styles.statBox, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Text style={[styles.statNumber, { color: colors.textPrimary }]}>{stats.visits}</Text>
+            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>VISITS</Text>
+          </View>
+          <View style={[styles.statBox, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Text style={[styles.statNumber, { color: colors.textPrimary }]}>{stats.vibes}</Text>
+            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>MOODS</Text>
+          </View>
+        </View>
+
+        {showSaved && (
+          <View style={styles.savedContainer}>
+            <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Your Saved Spots</Text>
+            {savedPlaces.length === 0 ? (
+              <View style={[styles.emptyState, { backgroundColor: colors.surfaceSecondary }]}>
+                <Text style={{ color: colors.textSecondary, fontFamily: Typography.families.uiMedium }}>Nothing saved yet.</Text>
+              </View>
+            ) : (
+              savedPlaces.map((place, index) => (
+                <PlaceCard key={index} place={place} index={index} userId={userId} mood={null} />
+              ))
+            )}
+          </View>
+        )}
+
+        {/* SETTINGS */}
+        <Text style={[styles.sectionTitle, { color: colors.textPrimary, marginTop: Spacing.huge }]}>Settings</Text>
+        <View style={[styles.listCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <TouchableOpacity style={styles.listItem} onPress={toggleTheme}>
+            <View style={styles.listIconBox}>
+              <Ionicons name={isDarkMode ? "moon" : "sunny"} size={20} color={colors.hero} />
             </View>
-            <Text style={[styles.listText, { color: '#FF5A5F' }]}>Log Out</Text>
+            <Text style={[styles.listText, { color: colors.textPrimary }]}>{isDarkMode ? 'Dark Mode' : 'Light Mode'}</Text>
+            <View style={[styles.toggleTrack, { backgroundColor: isDarkMode ? colors.hero : colors.surfaceSecondary }]}>
+              <View style={[styles.toggleThumb, { marginLeft: isDarkMode ? 18 : 2 }]} />
+            </View>
+          </TouchableOpacity>
+          
+          <View style={[styles.divider, { backgroundColor: colors.border }]} />
+          
+          <TouchableOpacity style={styles.listItem} onPress={onLogout}>
+            <View style={styles.listIconBox}>
+              <Ionicons name="log-out" size={20} color={Palette.coral} />
+            </View>
+            <Text style={[styles.listText, { color: Palette.coral }]}>Log Out</Text>
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.footerAppVersion}>ZIPO v1.1.0 (Live Context)</Text>
+        <Text style={[styles.footerText, { color: colors.textSecondary }]}>TRIXILE v1.2.0 • Production Build</Text>
 
       </ScrollView>
     </View>
@@ -164,229 +141,73 @@ export default function ProfileScreen({ onNavigate, onLogout, email, userId }) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0D0D12', // A deeper, richer aesthetic titanium black
-  },
+  container: { flex: 1 },
   header: {
     paddingTop: 50,
-    paddingBottom: 16,
-    paddingHorizontal: 24,
+    paddingBottom: 21,
+    paddingHorizontal: Spacing.xxl,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.05)',
   },
-  backButton: {
-    padding: 8,
-    marginLeft: -8,
-  },
+  headerSideContainer: { width: 80 },
   headerTitle: {
-    color: '#FFF',
-    fontSize: 18,
-    fontWeight: '800',
-    letterSpacing: 2,
+    fontFamily: Typography.families.heading,
+    fontSize: Typography.h3.fontSize,
+    flex: 1,
+    textAlign: 'center',
   },
-  spacer: {
-    width: 44, // Matches the back button width to center the title flexbox properly
-  },
-  scrollContent: {
-    paddingHorizontal: 24,
-    paddingBottom: 40,
-  },
-  avatarSection: {
-    alignItems: 'center',
-    marginTop: 32,
-    marginBottom: 32,
-  },
+  headerRectIcon: { width: 80, height: 50 },
+  scrollContent: { paddingHorizontal: Spacing.xxl, paddingBottom: 60 },
+  avatarSection: { alignItems: 'center', marginTop: Spacing.huge, marginBottom: Spacing.huge },
   avatarGlow: {
-    width: 110,
-    height: 110,
-    borderRadius: 55,
+    width: 120,
+    height: 120,
+    borderRadius: Radius.pill,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 255, 194, 0.1)',
-    shadowColor: '#00FFC2',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.6,
-    shadowRadius: 24,
-    elevation: 8,
   },
-  avatar: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    borderWidth: 2,
-    borderColor: '#0D0D12',
-  },
-  avatarBadge: {
-    position: 'absolute',
-    bottom: -2,
-    right: 2,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#00FFC2',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 3,
-    borderColor: '#0D0D12',
-  },
+  avatar: { width: 104, height: 104, borderRadius: 52, borderWidth: 3 },
   nameText: {
-    color: '#FFF',
-    fontSize: 26,
-    fontWeight: '900',
-    marginTop: 18,
-    letterSpacing: -0.5,
+    fontFamily: Typography.families.heading,
+    fontSize: Typography.h2.fontSize,
+    marginTop: Spacing.l,
   },
-  tagRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  eliteBadge: {
-    backgroundColor: 'rgba(0, 255, 194, 0.15)',
+  levelBadge: {
     paddingHorizontal: 12,
     paddingVertical: 4,
-    borderRadius: 12,
-    marginRight: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(0, 255, 194, 0.3)',
+    borderRadius: Radius.pill,
+    marginTop: Spacing.s,
   },
-  eliteText: {
-    color: '#00FFC2',
+  levelText: {
+    fontFamily: Typography.families.uiBold,
     fontSize: 10,
-    fontWeight: '800',
     letterSpacing: 1.5,
   },
-  locationTag: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  locationText: {
-    color: '#A1A5B7',
-    fontSize: 13,
-    fontWeight: '600',
-    marginLeft: 4,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 36,
-  },
+  statsRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: Spacing.huge },
   statBox: {
     flex: 1,
-    backgroundColor: '#16161D', // Smooth dark element background
-    borderRadius: 20,
+    height: 90,
+    borderRadius: Radius.large,
     alignItems: 'center',
-    paddingVertical: 18,
+    justifyContent: 'center',
     marginHorizontal: 4,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.03)',
   },
-  statIcon: {
-    marginBottom: 8,
-  },
-  statNumber: {
-    fontSize: 22,
-    fontWeight: '900',
-    color: '#FFF',
-  },
-  statLabel: {
-    color: '#777',
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 1.5,
-    marginTop: 2,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
+  statNumber: { fontFamily: Typography.families.heading, fontSize: Typography.h2.fontSize },
+  statLabel: { fontFamily: Typography.families.uiBold, fontSize: 10, letterSpacing: 1, marginTop: 2 },
   sectionTitle: {
-    color: '#777',
-    fontSize: 12,
-    fontWeight: '800',
-    letterSpacing: 2.5,
+    fontFamily: Typography.families.heading,
+    fontSize: Typography.h3.fontSize,
+    marginBottom: Spacing.l,
   },
-  editAll: {
-    color: '#00FFC2',
-    fontSize: 12,
-    fontWeight: '800',
-    letterSpacing: 1,
-  },
-  card: {
-    backgroundColor: '#16161D',
-    borderRadius: 20,
-    padding: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.03)',
-  },
-  cardIconBox: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 16,
-  },
-  cardContent: {
-    flex: 1,
-  },
-  cardLabel: {
-    color: '#A1A5B7',
-    fontSize: 12,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-    marginBottom: 2,
-  },
-  cardValue: {
-    color: '#FFF',
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  listCard: {
-    backgroundColor: '#16161D',
-    borderRadius: 20,
-    paddingHorizontal: 18,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.03)',
-    marginBottom: 20,
-  },
-  listItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 18,
-  },
-  listIconContainer: {
-    width: 32,
-    justifyContent: 'center',
-    alignItems: 'flex-start',
-  },
-  listText: {
-    flex: 1,
-    color: '#FFF',
-    fontSize: 15,
-    fontWeight: '600',
-    letterSpacing: 0.2,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
-  },
-  footerAppVersion: {
-    color: '#333',
-    textAlign: 'center',
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 2,
-    marginTop: 16,
-    marginBottom: 30, // Normal padding since doc is scrolling naturally
-  }
+  listCard: { borderRadius: Radius.xl, borderWidth: 1, overflow: 'hidden' },
+  listItem: { flexDirection: 'row', alignItems: 'center', padding: Spacing.xl },
+  listIconBox: { width: 32 },
+  listText: { flex: 1, fontFamily: Typography.families.uiBold, fontSize: 15 },
+  toggleTrack: { width: 44, height: 24, borderRadius: Radius.pill, justifyContent: 'center', paddingHorizontal: 2 },
+  toggleThumb: { width: 20, height: 20, borderRadius: 10, backgroundColor: '#FFF' },
+  divider: { height: 1 },
+  footerText: { textAlign: 'center', marginTop: Spacing.huge, fontSize: 10, fontFamily: Typography.families.uiMedium, letterSpacing: 2 }
 });

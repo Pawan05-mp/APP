@@ -1,28 +1,32 @@
 {
   "expo": {
-    "name": "zipo-app",
+    "name": "trixile",
     "slug": "zipo-app",
-    "scheme": "zipo-app",
+    "scheme": "trixile-app",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "icon": "./assets/icon-light.png",
+    "userInterfaceStyle": "automatic",
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/splash-light.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#ffffff",
+      "dark": {
+        "image": "./assets/splash.png",
+        "backgroundColor": "#000000"
+      }
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "userInterfaceStyle": "automatic"
     },
     "android": {
+      "userInterfaceStyle": "automatic",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
+        "backgroundColor": "#ffffff",
+        "foregroundImage": "./assets/adaptive-icon-light.png"
       },
-      "package": "com.pawanch123.zipoapp"
+      "package": "com.pawanch123.trixile"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -32,12 +36,13 @@
         "projectId": "6275303c-057a-4862-9dd1-009ba70c148b"
       }
     },
-    "runtimeVersion": {
-      "policy": "appVersion"
-    },
+    "runtimeVersion": "1.0.0",
     "updates": {
       "url": "https://u.expo.dev/6275303c-057a-4862-9dd1-009ba70c148b",
       "fallbackToCacheTimeout": 0
-    }
+    },
+    "plugins": [
+      "expo-font"
+    ]
   }
 }

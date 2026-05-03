@@ -1,170 +1,95 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { StyleSheet, Text, View, Pressable, Animated, Linking, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { StyleSheet, Text, View, Pressable, Animated, Linking, TouchableOpacity, ActivityIndicator, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { interactWithPlace } from '../api';
+import { useSavedPlaces } from '../context/SavedPlacesContext';
+import { useTheme } from '../context/ThemeContext';
+import { Typography, Spacing, Radius, Palette } from '../constants/DesignTokens';
+import Analytics from '../utils/Analytics';
 
-const PlaceCard = ({ place, index, userId, mood, showReplace = false, isReplacing = false, onReplace, isSaved: initialSaved = false }) => {
-  const { _id, name, estimatedMinutes, distanceInKm, reason, category } = place;
-  const [isSaved, setIsSaved] = useState(initialSaved);
-  const [isSaving, setIsSaving] = useState(false);
-  const [saveError, setSaveError] = useState(false);
+const PlaceCard = ({ place, index, userId, mood, showReplace = false, isReplacing = false, onReplace }) => {
+  const { _id, name, estimatedMinutes, distanceInKm, reason, category, image_url, trustTag } = place;
+  const { toggleSave, isSaved: checkIsSaved } = useSavedPlaces();
+  const { colors, theme } = useTheme();
   
-  // Animation on mount / replacement
-  const translateY = useRef(new Animated.Value(50)).current;
+  const isSaved = checkIsSaved(_id || place.id);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const translateY = useRef(new Animated.Value(30)).current;
   const opacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // Reset and re-run entrance animation when the place data changes (replacement swap)
-    translateY.setValue(40);
-    opacity.setValue(0);
-
     Animated.parallel([
-      Animated.spring(translateY, {
-        toValue: 0,
-        tension: 50,
-        friction: 7,
-        delay: index * 80,
-        useNativeDriver: true,
-      }),
-      Animated.timing(opacity, {
-        toValue: 1,
-        duration: 250,
-        delay: index * 80,
-        useNativeDriver: true,
-      })
+      Animated.spring(translateY, { toValue: 0, tension: 50, friction: 8, delay: index * 100, useNativeDriver: true }),
+      Animated.timing(opacity, { toValue: 1, duration: 400, delay: index * 100, useNativeDriver: true })
     ]).start();
-
-    // Reset save state when place changes
-    setIsSaved(initialSaved);
-    setSaveError(false);
-  }, [_id, initialSaved]);
-
-  const getCategoryIcon = (cat) => {
-    switch (cat) {
-      case 'quickbite': return '🍔';
-      case 'chill': return '🥤';
-      case 'reset': return '🌿';
-      case 'social': return '🎉';
-      default: return '📍';
-    }
-  };
+  }, [_id]);
 
   const handleSave = async () => {
-    if (isSaving || !userId) return;
-    
+    if (!userId) return;
     setIsSaving(true);
-    setSaveError(false);
-    
     try {
       const newSavedState = !isSaved;
-      await interactWithPlace(userId, _id, newSavedState ? 'save' : 'unsave', mood);
-      setIsSaved(newSavedState);
+      await interactWithPlace(userId, _id || place.id, newSavedState ? 'save' : 'unsave', mood);
+      toggleSave(place);
+      Analytics.logEvent(userId, 'place_save', { placeId: _id || place.id, mood, saved: newSavedState });
     } catch (err) {
       console.error('Save failed:', err);
-      setSaveError(true);
-      // Revert UI state on error
-      setTimeout(() => setSaveError(false), 2000);
     } finally {
       setIsSaving(false);
     }
   };
 
   const handleNavigate = () => {
-    if (!userId || !_id) return;
-    interactWithPlace(userId, _id, 'go', mood).catch(err => console.error('Navigate log failed:', err));
+    Analytics.logEvent(userId, 'place_go', { placeId: _id, mood });
     const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name)}`;
-    Linking.openURL(url).catch(err => console.error('Error opening Map:', err));
-  };
-
-  const handleNotThis = () => {
-    if (!userId || !_id) return;
-    // Log the "skip" interaction for learning
-    interactWithPlace(userId, _id, 'skip', mood).catch(err => console.error('Skip log failed:', err));
-    if (onReplace) onReplace();
+    Linking.openURL(url);
   };
 
   return (
     <Animated.View style={[
-      styles.card,
-      { opacity, transform: [{ translateY }] },
-      isReplacing && styles.cardReplacing
+      styles.card, 
+      { opacity, transform: [{ translateY }], backgroundColor: colors.surface, borderColor: colors.border }
     ]}>
-      {isReplacing && (
-        <View style={styles.replacingOverlay}>
-          <ActivityIndicator size="small" color="#00FFC2" />
-          <Text style={styles.replacingText}>Finding alternative...</Text>
-        </View>
-      )}
+      <Image 
+        source={{ uri: image_url || 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800&q=80' }} 
+        style={styles.image}
+      />
 
-      <View style={isReplacing ? styles.contentHidden : undefined}>
+      <View style={styles.content}>
         <View style={styles.header}>
-          <View style={styles.titleGroup}>
-            <Text style={styles.emoji}>{getCategoryIcon(category)}</Text>
-            <Text style={styles.name} numberOfLines={1}>{name}</Text>
-          </View>
-          <TouchableOpacity 
-            onPress={handleSave} 
-            style={[styles.saveBtn, isSaving && styles.saveBtnLoading, saveError && styles.saveBtnError]}
-            disabled={isSaving}
-            activeOpacity={0.7}
-          >
-            {isSaving ? (
-              <ActivityIndicator size="small" color="#00FFC2" />
-            ) : (
-              <Ionicons 
-                name={isSaved ? "heart" : "heart-outline"} 
-                size={24} 
-                color={saveError ? "#FF5A5F" : (isSaved ? "#FF5A5F" : "#FFF")} 
-              />
+          <View style={{ flex: 1 }}>
+            {trustTag && (
+              <View style={[styles.trustBadge, { backgroundColor: colors.hero }]}>
+                <Text style={[styles.trustBadgeText, { color: colors.heroContrast }]}>{trustTag}</Text>
+              </View>
             )}
+            <Text style={[styles.name, { color: colors.textPrimary }]} numberOfLines={1}>{name}</Text>
+            <View style={styles.metaRow}>
+              <Text style={[styles.category, { color: colors.hero }]}>{category.toUpperCase()}</Text>
+              <View style={[styles.dot, { backgroundColor: colors.border }]} />
+              <Text style={[styles.distance, { color: colors.textSecondary }]}>{distanceInKm} km away</Text>
+            </View>
+          </View>
+          
+          <TouchableOpacity onPress={handleSave} style={styles.saveBtn}>
+            <Ionicons name={isSaved ? "heart" : "heart-outline"} size={24} color={isSaved ? Palette.coral : colors.textSecondary} />
           </TouchableOpacity>
         </View>
 
-        <View style={styles.badgeRow}>
-          <View style={styles.timeBadge}>
-            <Ionicons name="time-outline" size={12} color="#00FFC2" />
-            <Text style={styles.timeText}>{estimatedMinutes <= 5 ? `${estimatedMinutes} min away` : `${estimatedMinutes} min`}</Text>
-          </View>
-          {place.isLessCrowded && (
-            <View style={styles.crowdBadge}>
-              <Ionicons name="people-outline" size={12} color="#00FFC2" />
-              <Text style={styles.crowdText}>Less crowded</Text>
-            </View>
-          )}
-          <View style={styles.distanceBadge}>
-            <Ionicons name="location-outline" size={12} color="#A1A5B7" />
-            <Text style={styles.distanceText}>{distanceInKm} km away</Text>
-          </View>
+        <View style={[styles.reasonBox, { backgroundColor: colors.surfaceSecondary }]}>
+          <Ionicons name="sparkles" size={14} color={colors.hero} />
+          <Text style={[styles.reasonText, { color: colors.textSecondary }]}>{reason}</Text>
         </View>
 
-        <View style={styles.body}>
-          <View style={styles.reasonPill}>
-            <Ionicons name="sparkles" size={10} color="#00FFC2" />
-            <Text style={styles.reasonText}>{reason}</Text>
-          </View>
-        </View>
-
-        <View style={styles.actionRow}>
-          <Pressable 
-            style={({ pressed }) => [styles.navBtn, pressed && styles.navBtnPressed]}
-            onPress={handleNavigate}
-          >
-            <Ionicons name="navigate" size={18} color="#000" />
-            <Text style={styles.navBtnText}>Go Now</Text>
-          </Pressable>
-
-          {showReplace && (
-            <TouchableOpacity 
-              style={styles.notThisBtn} 
-              onPress={handleNotThis}
-              disabled={isReplacing}
-              activeOpacity={0.6}
-            >
-              <Ionicons name="close-circle-outline" size={16} color="#FF5A5F" />
-              <Text style={styles.notThisText}>Not this</Text>
-            </TouchableOpacity>
-          )}
-        </View>
+        <TouchableOpacity 
+          style={[styles.goBtn, { backgroundColor: colors.hero }]}
+          onPress={handleNavigate}
+          activeOpacity={0.8}
+        >
+          <Text style={[styles.goBtnText, { color: colors.heroContrast }]}>Get Directions</Text>
+          <Ionicons name="arrow-forward" size={18} color={colors.heroContrast} />
+        </TouchableOpacity>
       </View>
     </Animated.View>
   );
@@ -172,178 +97,91 @@ const PlaceCard = ({ place, index, userId, mood, showReplace = false, isReplacin
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: 24,
-    padding: 20,
-    marginBottom: 20,
+    borderRadius: Radius.xl,
+    marginBottom: Spacing.xxl,
+    overflow: 'hidden',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
   },
-  cardReplacing: {
-    minHeight: 180,
-    justifyContent: 'center',
+  image: {
+    width: '100%',
+    height: 180,
+    backgroundColor: '#222',
   },
-  replacingOverlay: {
-    position: 'absolute',
-    top: 0, left: 0, right: 0, bottom: 0,
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 10,
-  },
-  replacingText: {
-    color: '#A1A5B7',
-    fontSize: 12,
-    fontWeight: '600',
-    marginTop: 8,
-  },
-  contentHidden: {
-    opacity: 0,
+  content: {
+    padding: Spacing.xl,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  titleGroup: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  emoji: {
-    fontSize: 24,
-    marginRight: 10,
+    alignItems: 'flex-start',
+    marginBottom: Spacing.m,
   },
   name: {
-    color: '#FFF',
-    fontSize: 20,
-    fontWeight: '800',
-    flex: 1,
+    fontFamily: Typography.families.heading,
+    fontSize: Typography.h3.fontSize,
+    marginBottom: 4,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  category: {
+    fontFamily: Typography.families.uiBold,
+    fontSize: Typography.caption.fontSize,
+    letterSpacing: 1,
+  },
+  dot: {
+    width: 3,
+    height: 3,
+    borderRadius: 2,
+    marginHorizontal: 8,
+  },
+  distance: {
+    fontFamily: Typography.families.uiMedium,
+    fontSize: Typography.caption.fontSize,
   },
   saveBtn: {
     padding: 4,
-    width: 32,
-    height: 32,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
-  saveBtnLoading: {
-    opacity: 0.7,
-  },
-  saveBtnError: {
-    backgroundColor: 'rgba(255, 90, 95, 0.1)',
-    borderRadius: 16,
-  },
-  badgeRow: {
-    flexDirection: 'row',
-    marginBottom: 16,
-  },
-  timeBadge: {
+  reasonBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 255, 194, 0.1)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
-    marginRight: 10,
-  },
-  timeText: {
-    color: '#00FFC2',
-    fontSize: 13,
-    fontWeight: '700',
-    marginLeft: 6,
-  },
-  crowdBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 255, 194, 0.1)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
-    marginRight: 10,
-  },
-  crowdText: {
-    color: '#00FFC2',
-    fontSize: 13,
-    fontWeight: '700',
-    marginLeft: 6,
-  },
-  distanceBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 4,
-  },
-  distanceText: {
-    color: '#A1A5B7',
-    fontSize: 13,
-    fontWeight: '600',
-    marginLeft: 4,
-  },
-  body: {
-    marginBottom: 20,
-  },
-  reasonPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
-    alignSelf: 'flex-start',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 10,
+    padding: Spacing.m,
+    borderRadius: Radius.medium,
+    marginBottom: Spacing.l,
   },
   reasonText: {
-    color: '#CBD5E1',
-    fontSize: 13,
-    marginLeft: 6,
-    fontWeight: '500',
-  },
-  // ─── Action buttons row ─────────────────────────
-  actionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  navBtn: {
-    flex: 1,
-    backgroundColor: '#00FFC2',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 16,
-    borderRadius: 16,
-    shadowColor: '#00FFC2',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  navBtnPressed: {
-    opacity: 0.8,
-    transform: [{ scale: 0.98 }],
-  },
-  navBtnText: {
-    color: '#000',
-    fontSize: 16,
-    fontWeight: '800',
+    fontFamily: Typography.families.uiMedium,
+    fontSize: Typography.body.fontSize,
     marginLeft: 8,
+    flex: 1,
   },
-  notThisBtn: {
+  trustBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: Radius.small,
+    marginBottom: 6,
+  },
+  trustBadgeText: {
+    fontFamily: Typography.families.uiBold,
+    fontSize: 9,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+  },
+  goBtn: {
+    height: 52,
+    borderRadius: Radius.large,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 16,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255, 90, 95, 0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 90, 95, 0.2)',
-    gap: 4,
+    marginTop: Spacing.s,
   },
-  notThisText: {
-    color: '#FF5A5F',
-    fontSize: 13,
-    fontWeight: '700',
-  },
+  goBtnText: {
+    fontFamily: Typography.families.uiBold,
+    fontSize: Typography.button.fontSize,
+    marginRight: 8,
+  }
 });
 
 export default PlaceCard;

@@ -1,12 +1,15 @@
 import React, { useRef } from 'react';
 import { StyleSheet, Text, View, Pressable, Animated } from 'react-native';
+import { useTheme } from '../context/ThemeContext';
+import { Typography, Radius, Spacing } from '../constants/DesignTokens';
 
 const MoodCard = ({ title, emoji, isSelected, onPress }) => {
+  const { colors, theme } = useTheme();
   const scale = useRef(new Animated.Value(1)).current;
 
   const handlePressIn = () => {
     Animated.spring(scale, {
-      toValue: 0.92,
+      toValue: 0.95,
       useNativeDriver: true,
     }).start();
   };
@@ -14,7 +17,7 @@ const MoodCard = ({ title, emoji, isSelected, onPress }) => {
   const handlePressOut = () => {
     Animated.spring(scale, {
       toValue: 1,
-      friction: 3,
+      friction: 4,
       tension: 40,
       useNativeDriver: true,
     }).start();
@@ -25,15 +28,26 @@ const MoodCard = ({ title, emoji, isSelected, onPress }) => {
       onPress={onPress}
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
-      style={{ width: '48%', marginBottom: 15 }}
+      style={{ width: '48%', marginBottom: Spacing.l }}
     >
       <Animated.View style={[
         styles.card, 
-        isSelected && styles.selectedCard,
+        { 
+          backgroundColor: colors.surface, 
+          borderColor: colors.border,
+          shadowColor: isSelected ? colors.hero : '#000'
+        },
+        isSelected && { 
+            backgroundColor: colors.hero + '1A', 
+            borderColor: colors.hero,
+            shadowOpacity: 0.2,
+            shadowRadius: 12,
+            elevation: 8 
+        },
         { transform: [{ scale }] }
       ]}>
         <Text style={styles.emoji}>{emoji}</Text>
-        <Text style={styles.title}>{title}</Text>
+        <Text style={[styles.title, { color: isSelected ? colors.hero : colors.textPrimary }]}>{title}</Text>
       </Animated.View>
     </Pressable>
   );
@@ -41,36 +55,24 @@ const MoodCard = ({ title, emoji, isSelected, onPress }) => {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#1E1E1E',
-    borderRadius: 20,
-    paddingVertical: 24,
+    borderRadius: Radius.large,
+    paddingVertical: Spacing.xxl,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1.5,
-    borderColor: '#333333',
-    elevation: 4, // Android shadow
-    shadowColor: '#000', // iOS shadow
+    elevation: 2,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
-  },
-  selectedCard: {
-    backgroundColor: '#00332B', // A deep mint hint
-    borderColor: '#00FFC2',
-    shadowColor: '#00FFC2',
-    shadowOpacity: 0.4,
-    shadowRadius: 10,
-    elevation: 8,
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
   },
   emoji: {
-    fontSize: 42,
-    marginBottom: 8,
+    fontSize: 40,
+    marginBottom: Spacing.s,
   },
   title: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '700',
-    letterSpacing: 0.5,
+    fontFamily: Typography.families.uiBold,
+    fontSize: Typography.bodyLarge.fontSize,
+    letterSpacing: 0.2,
   }
 });
 

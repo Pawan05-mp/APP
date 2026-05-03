@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { supabase } from '../supabase';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { Theme } from '../constants/Theme';
 
 export default function AuthScreen({ onLogin }) {
   const [isLogin, setIsLogin] = useState(true);
@@ -81,10 +82,10 @@ export default function AuthScreen({ onLogin }) {
           <View style={styles.heroSection}>
             <View style={styles.logoGlowbox}>
               <View style={styles.logoCircle}>
-                <Ionicons name="location-sharp" size={42} color="#0D0D12" style={{ marginLeft: 2 }} />
+                <Ionicons name="location-sharp" size={42} color={Theme.dark.background.primary} style={{ marginLeft: 2 }} />
               </View>
             </View>
-            <Text style={styles.brandTitle}>Z I P O</Text>
+            <Text style={styles.brandTitle}>T R I X I L E</Text>
             <Text style={styles.subtitle}>{isLogin ? 'Welcome back, Explorer.' : 'Join the journey.'}</Text>
           </View>
 
@@ -136,11 +137,11 @@ export default function AuthScreen({ onLogin }) {
               disabled={!email || !password || isLoading}
             >
               {isLoading ? (
-                <ActivityIndicator color="#0D0D12" />
+                <ActivityIndicator color={Theme.brand.black} />
               ) : (
                 <>
                   <Text style={styles.submitText}>{isLogin ? 'LOG IN' : 'CREATE ACCOUNT'}</Text>
-                  <Ionicons name="arrow-forward" size={18} color="#0D0D12" />
+                  <Ionicons name="arrow-forward" size={18} color={Theme.brand.black} />
                 </>
               )}
             </TouchableOpacity>
@@ -165,7 +166,7 @@ export default function AuthScreen({ onLogin }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0D0D12',
+    backgroundColor: Theme.dark.background.primary,
   },
   scrollContent: {
     flexGrow: 1,
@@ -179,7 +180,7 @@ const styles = StyleSheet.create({
     marginBottom: 50,
   },
   logoGlowbox: {
-    shadowColor: '#00FFC2',
+    shadowColor: Theme.brand.hero,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.8,
     shadowRadius: 24,
@@ -190,37 +191,37 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#00FFC2',
+    backgroundColor: Theme.brand.hero,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 3,
-    borderColor: '#0D0D12',
+    borderColor: Theme.dark.background.primary,
   },
   brandTitle: {
-    color: '#FFF',
+    color: Theme.dark.text.primary,
     fontSize: 42,
     fontWeight: '900',
     letterSpacing: 4,
     marginBottom: 8,
   },
   subtitle: {
-    color: '#A1A5B7',
+    color: Theme.dark.text.secondary,
     fontSize: 16,
     fontWeight: '500',
   },
   errorBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 90, 95, 0.15)',
+    backgroundColor: Theme.brand.coral + '26',
     borderWidth: 1,
-    borderColor: 'rgba(255, 90, 95, 0.3)',
+    borderColor: Theme.brand.coral + '4D',
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
     marginBottom: 16,
   },
   errorText: {
-    color: '#FF5A5F',
+    color: Theme.brand.coral,
     fontSize: 13,
     fontWeight: '600',
     marginLeft: 8,
@@ -232,7 +233,7 @@ const styles = StyleSheet.create({
   inputBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#16161D',
+    backgroundColor: Theme.dark.background.secondary,
     borderRadius: 16,
     marginBottom: 16,
     paddingHorizontal: 16,
@@ -245,7 +246,7 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    color: '#FFF',
+    color: Theme.dark.text.primary,
     fontSize: 16,
     fontWeight: '500',
     height: '100%',
@@ -258,19 +259,19 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   forgotText: {
-    color: '#A1A5B7',
+    color: Theme.dark.text.secondary,
     fontSize: 13,
     fontWeight: '600',
   },
   submitBtn: {
-    backgroundColor: '#00FFC2',
+    backgroundColor: Theme.brand.hero,
     height: 56,
     borderRadius: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 8,
-    shadowColor: '#00FFC2',
+    shadowColor: Theme.brand.hero,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 12,
@@ -282,7 +283,7 @@ const styles = StyleSheet.create({
     elevation: 0,
   },
   submitText: {
-    color: '#0D0D12',
+    color: Theme.brand.black,
     fontSize: 15,
     fontWeight: '800',
     letterSpacing: 1.5,
@@ -295,12 +296,12 @@ const styles = StyleSheet.create({
     marginTop: 'auto',
   },
   toggleText: {
-    color: '#A1A5B7',
+    color: Theme.dark.text.secondary,
     fontSize: 14,
     fontWeight: '500',
   },
   toggleLink: {
-    color: '#00FFC2',
+    color: Theme.brand.hero,
     fontSize: 14,
     fontWeight: '800',
   }
